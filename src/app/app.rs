@@ -1,4 +1,4 @@
-use crate::core::sim::{SimContext, SimulationState};
+use crate::core::sim::{SimContext};
 use crate::graphics::border::BorderTile;
 use crate::graphics::layers::SimulationTile;
 use crate::app::tile::TileViewManager;
@@ -10,7 +10,7 @@ use taffy::{Dimension, Size, Style};
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
-    event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    event_loop::{ActiveEventLoop},
     window::{Window, WindowId},
 };
 
@@ -18,7 +18,7 @@ use hecs::World;
 use crate::gpu;
 
 mod components {
-    use crate::core::sim::{SimContext, SimulationState};
+    use crate::core::sim::{SimulationState};
     use std::sync::{Arc, Mutex};
     use wgpu;
 
@@ -39,46 +39,60 @@ pub struct App {
     gpu_context: Option<gpu::context::GpuContext>,
     world: World,
     tiles: TileViewManager,
-    env_node: taffy::NodeId,
+    env_nodes: Vec<taffy::NodeId>, // Changed to support multiple environments
 }
 
-
 impl App {
-    pub const FPS: u32 = 60;
-
-    pub(crate) fn new() -> Self {
+    const FPS: f32 = 60.;
+    pub fn new() -> Self {
         let mut world = World::new();
+        let mut tiles = TileViewManager::new();
+        
+        let sim_context1 = SimContext { viscosity: 25.0 };
+        let sim_context2 = SimContext { viscosity: 1.0 };
 
-        let simulation_context = SimContext { viscosity: 25.0 };
-        let simulation_state = Arc::new(Mutex::new(benches::organism_lookn_cells(
-            simulation_context,
-        )));
+        let simulation_state1 = Arc::new(Mutex::new(benches::organism_lookn_cells(sim_context1)));
+        let simulation_state2 = Arc::new(Mutex::new(benches::organism_lookn_cells(sim_context2)));
 
         world.spawn((
             components::Simulation {
-                state: simulation_state,
+                state: simulation_state1,
             },
             components::PhysicsSystem {
                 dt: 1.0 / Self::FPS as f64,
             },
         ));
 
-        let mut tiles = TileViewManager::new();
-        let style = Style {
-            size: Size {
-                width: Dimension::percent(1.0),
-                height: Dimension::auto(),
+        world.spawn((
+            components::Simulation {
+                state: simulation_state2,
             },
-            aspect_ratio: Some(16.0 / 9.0),
-            ..Default::default()
-        };
-        let environment_node = tiles.add_leaf(tiles.root(), style);
+            components::PhysicsSystem {
+                dt: 1.0 / Self::FPS as f64,
+            },
+        ));
+
+
+        let mut env_nodes = Vec::new();
+
+        for _ in 0..2 {
+            let style = Style {
+                size: Size {
+                    width: Dimension::percent(0.5),
+                    height: Dimension::auto(),
+                },
+                aspect_ratio: Some(16.0 / 9.0),
+                ..Default::default()
+            };
+            let node = tiles.add_leaf(tiles.root(), style);
+            env_nodes.push(node);
+        }
 
         Self {
             gpu_context: None,
             world,
             tiles,
-            env_node: environment_node,
+            env_nodes,
         }
     }
 
@@ -98,12 +112,14 @@ impl App {
             gpu_context.size.width as f32,
             gpu_context.size.height as f32,
         ));
+        
+        for node in &self.env_nodes {
+            let env = SimulationTile::new(Vec2::new(15.0, 10.0), &gpu_context);
+            env.init_buffers(&gpu_context.queue);
 
-        let env = SimulationTile::new(Vec2::new(15.0, 10.0), &gpu_context);
-        env.init_buffers(&gpu_context.queue);
-
-        self.tiles.add_renderer(self.env_node, env);
-        self.tiles.add_renderer(self.env_node, BorderTile::new(&gpu_context));
+            self.tiles.add_renderer(*node, env);
+            self.tiles.add_renderer(*node, BorderTile::new(&gpu_context));
+        }
 
         self.gpu_context = Some(gpu_context);
         window.request_redraw();
@@ -116,22 +132,25 @@ impl App {
                 sim.state.lock().unwrap().physics_pass(physics.dt);
             }
 
-            let simulation_state = self.world
+
+            let simulation_states: Vec<_> = self.world
                 .query::<&components::Simulation>()
                 .iter()
-                .next()
-                .map(|(_, sim)| sim.state.clone());
+                .map(|(_, sim)| sim.state.clone())
+                .collect();
 
-            if let Some(state) = simulation_state {
-                self.tiles.load_all(state, &gpu_ctx.queue);
 
-                let mut frame = gpu_ctx.start_frame();
-                {
-                    let mut render_pass = frame.begin_render_pass();
-                    self.tiles.render_all(&mut render_pass);
-                }
-                gpu_ctx.end_frame(frame);
+            for (node, state) in self.env_nodes.iter().zip(simulation_states.iter()) {
+                self.tiles.load_all(state.clone(), &gpu_ctx.queue);
             }
+
+
+            let mut frame = gpu_ctx.start_frame();
+            {
+                let mut render_pass = frame.begin_render_pass();
+                self.tiles.render_all(&mut render_pass);
+            }
+            gpu_ctx.end_frame(frame);
 
             gpu_ctx.get_window().request_redraw();
         }
