@@ -1,3 +1,3 @@
 pub mod tile;
-mod app;
+pub mod app;
 mod new_tile;
