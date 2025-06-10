@@ -1,0 +1,22 @@
+[package]
+name = "cellular-life"
+version = "0.1.0"
+edition = "2024"
+
+
+[dependencies]
+env_logger = "0.11.6"
+pollster = "0.4"
+wgpu = "24.0.0"
+winit = { version = "0.30.8" }
+bytemuck = "1.22.0"
+glam = "0.30.1"
+rand = "0.9.0"
+taffy = "0.8.2"
+
+[features]
+test = []
+
+[alias]
+run-normal = "run --package cellular-life --bin cellular-life"
+run-test = "run --package cellular-life --bin cellular-life --features test"
