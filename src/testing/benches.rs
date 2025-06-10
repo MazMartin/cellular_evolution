@@ -1,15 +1,15 @@
 use crate::core::elements::CellConnection;
-use crate::core::sim::{SimContext, AppContext};
+use crate::core::sim::{SimContext, SimulationState};
 use crate::core::{elements::Cell, features::CellType, genes::Gene};
 use crate::graphics::models::space::AABB;
 use glam::Vec2;
 use rand::prelude::*;
 use std::f64::consts::TAU;
 
-pub fn organism_lookn_cells(context: SimContext) -> AppContext {
+pub fn organism_lookn_cells(context: SimContext) -> SimulationState {
     let bound = AABB::UNIT * 4.0;
 
-    let mut cell_alloc = AppContext::new(context);
+    let mut cell_alloc = SimulationState::new(context);
 
     cell_alloc.cells.insert_alloc_vec(vec![
         Cell::new(Vec2::new(0.0, 0.0).into(), CellType::Neural),

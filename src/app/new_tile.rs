@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use taffy::TaffyTree;
 use taffy::prelude::*;
 use wgpu::RenderPass;
-use crate::core::sim::AppContext;
+use crate::core::sim::SimulationState;
 
 pub struct Tile {
     pub render_layers: Vec<Box<dyn TileRenderer>>,
@@ -119,7 +119,7 @@ impl TileViewManager {
         }
     }
 
-    pub fn load_all(&mut self, context: Arc<Mutex<AppContext>>, queue: &wgpu::Queue) {
+    pub fn load_all(&mut self, context: Arc<Mutex<SimulationState>>, queue: &wgpu::Queue) {
         for (node_id, tile) in &mut self.tiles {
             if let Some(aabb) = self.aabb_cache.get(node_id) {
                 for layer in tile.render_layers.iter_mut() {

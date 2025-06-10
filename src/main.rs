@@ -7,7 +7,7 @@ mod testing;
 mod utils;
 mod app;
 
-use crate::core::sim::{SimContext, AppContext};
+use crate::core::sim::{SimContext, SimulationState};
 use crate::graphics::border::BorderTile;
 use crate::graphics::layers::SimulationTile;
 use crate::app::tile::TileViewManager;
@@ -23,21 +23,56 @@ use winit::{
     window::{Window, WindowId},
 };
 
+use hecs::World;
+
+// First, let's define our components
+mod components {
+    use crate::core::sim::{SimContext, SimulationState};
+    use std::sync::{Arc, Mutex};
+    use wgpu;
+
+    pub struct Simulation {
+        pub state: Arc<Mutex<SimulationState>>,
+    }
+
+    pub struct RenderSystem {
+        pub queue: Arc<wgpu::Queue>,
+    }
+
+    pub struct PhysicsSystem {
+        pub dt: f64,
+    }
+}
+
 struct App {
     gpu_context: Option<gpu::context::GpuContext>,
-    simulation_state: Arc<Mutex<AppContext>>,
+    world: World,
     tiles: TileViewManager,
     env_node: taffy::NodeId,
 }
+
 
 impl App {
     pub const FPS: u32 = 60;
 
     fn new() -> Self {
+        let mut world = World::new();
+
+        // Create simulation component
         let simulation_context = SimContext { viscosity: 25.0 };
         let simulation_state = Arc::new(Mutex::new(benches::organism_lookn_cells(
             simulation_context,
         )));
+
+        // Spawn our main systems
+        world.spawn((
+            components::Simulation {
+                state: simulation_state,
+            },
+            components::PhysicsSystem {
+                dt: 1.0 / Self::FPS as f64,
+            },
+        ));
 
         let mut tiles = TileViewManager::new();
         let style = Style {
@@ -52,7 +87,7 @@ impl App {
 
         Self {
             gpu_context: None,
-            simulation_state,
+            world,
             tiles,
             env_node: environment_node,
         }
@@ -65,6 +100,11 @@ impl App {
                 .unwrap(),
         );
         let gpu_context = pollster::block_on(gpu::context::GpuContext::new(window.clone()));
+
+        // Add render system component
+        self.world.spawn((components::RenderSystem {
+            queue: Arc::new(gpu_context.queue.clone()),
+        },));
 
         self.tiles.resize(Vec2::new(
             gpu_context.size.width as f32,
@@ -81,34 +121,41 @@ impl App {
         window.request_redraw();
     }
 
-    fn handle_resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
+    fn update_and_render(&mut self) {
         if let Some(gpu_ctx) = &mut self.gpu_context {
-            gpu_ctx.resize(size);
-            self.tiles
-                .resize(vec2(gpu_ctx.size.width as f32, gpu_ctx.size.height as f32));
+            // Run physics system
+            for (_, (sim, physics)) in self.world.query::<(&mut components::Simulation, &components::PhysicsSystem)>().iter() {
+                sim.state.lock().unwrap().physics_pass(physics.dt);
+            }
+
+            // Get simulation state for rendering
+            let simulation_state = self.world
+                .query::<&components::Simulation>()
+                .iter()
+                .next()
+                .map(|(_, sim)| sim.state.clone());
+
+            if let Some(state) = simulation_state {
+                // Update and render tiles
+                self.tiles.load_all(state, &gpu_ctx.queue);
+
+                let mut frame = gpu_ctx.start_frame();
+                {
+                    let mut render_pass = frame.begin_render_pass();
+                    self.tiles.render_all(&mut render_pass);
+                }
+                gpu_ctx.end_frame(frame);
+            }
+
+            gpu_ctx.get_window().request_redraw();
         }
     }
 
-    fn update_and_render(&mut self) {
+
+    fn handle_resize(&mut self, size: winit::dpi::PhysicalSize<u32>) {
         if let Some(gpu_ctx) = &mut self.gpu_context {
-            // Fixed timestep simulation
-            self.simulation_state
-                .lock()
-                .unwrap()
-                .physics_pass(1.0 / Self::FPS as f64);
-
-            // Update and render tiles
-            self.tiles
-                .load_all(self.simulation_state.clone(), &gpu_ctx.queue);
-
-            let mut frame = gpu_ctx.start_frame();
-            {
-                let mut render_pass = frame.begin_render_pass();
-                self.tiles.render_all(&mut render_pass);
-            }
-            gpu_ctx.end_frame(frame);
-
-            gpu_ctx.get_window().request_redraw();
+            gpu_ctx.resize(size);
+            self.tiles.resize(vec2(gpu_ctx.size.width as f32, gpu_ctx.size.height as f32));
         }
     }
 }

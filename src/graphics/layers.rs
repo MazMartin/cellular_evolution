@@ -1,7 +1,7 @@
 use super::loaders::EnvironmentRenderLoader;
 use super::models::{gpu::*, space::*};
 use super::renderer::TileRenderer;
-use crate::core::sim::AppContext;
+use crate::core::sim::SimulationState;
 use crate::gpu::buffers::{BindInfo, BufferKind, GpuBuffer};
 use crate::gpu::context::GpuContext;
 use glam::{Vec2, vec2};
@@ -197,7 +197,7 @@ impl TileRenderer for SimulationTile {
             .write(&queue, &mat4_to_gpu_mat(self.camera.to_mat4().inverse()))
     }
 
-    fn update_render_data(&mut self, state: Arc<Mutex<AppContext>>, queue: &wgpu::Queue) {
+    fn update_render_data(&mut self, state: Arc<Mutex<SimulationState>>, queue: &wgpu::Queue) {
         self.loader.run(state);
 
         self.instance_count = self.loader.gpu_render_instances.len() as u32;

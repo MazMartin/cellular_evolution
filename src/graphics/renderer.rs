@@ -2,7 +2,7 @@ use crate::gpu::context::GpuContext;
 use glam::Vec2;
 use std::sync::{Arc, Mutex};
 use wgpu::RenderPass;
-use crate::core::sim::AppContext;
+use crate::core::sim::SimulationState;
 
 pub struct FrameContext {
     pub surface_texture: wgpu::SurfaceTexture,
@@ -62,7 +62,7 @@ impl GpuContext {
 
 pub trait TileRenderer {
     fn resize(&mut self, size: Vec2, queue: &wgpu::Queue);
-    fn update_render_data(&mut self, state: Arc<Mutex<AppContext>>, queue: &wgpu::Queue);
+    fn update_render_data(&mut self, state: Arc<Mutex<SimulationState>>, queue: &wgpu::Queue);
     fn render_pipeline<'a>(&'a self, render_pass: &mut RenderPass<'a>);
 }
 

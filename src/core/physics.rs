@@ -1,9 +1,9 @@
 use crate::core::elements::Cell;
-use crate::core::sim::AppContext;
+use crate::core::sim::SimulationState;
 use crate::physics::forces::{ForceApplier, ForceAppl, Lever, LinearSpring};
 use crate::utils::vector::Vec2d;
 
-impl AppContext {
+impl SimulationState {
     pub fn physics_pass(&mut self, dt: f64) {
         for connection in self.connections.iter() {
             let (cell_a, cell_b) = self.cells.get_mut_pair(connection.id_a, connection.id_b);

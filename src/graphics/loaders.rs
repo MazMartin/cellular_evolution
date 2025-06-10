@@ -1,7 +1,7 @@
 use super::models::cpu::Primitive;
 use super::models::gpu::{GpuPrimitive, GpuPrimitiveIndex, GpuQuadRenderInstance};
 use super::models::space::AABB;
-use crate::core::sim::AppContext;
+use crate::core::sim::SimulationState;
 use crate::utils::algorithms;
 use crate::utils::data::IdxPair;
 use std::sync::{Arc, Mutex};
@@ -39,7 +39,7 @@ impl EnvironmentRenderLoader {
         self.gpu_render_instances.clear();
     }
 
-    pub fn run(&mut self, state: Arc<Mutex<AppContext>>) {
+    pub fn run(&mut self, state: Arc<Mutex<SimulationState>>) {
         self.flush();
         {
             let mut state = state.lock().expect("Failed to lock SimulationState");
@@ -48,7 +48,7 @@ impl EnvironmentRenderLoader {
         self.process();
     }
 
-    fn access(&mut self, state: &mut AppContext) {
+    fn access(&mut self, state: &mut SimulationState) {
         // flatten whole cell array
         for (og_index, flat_index, cell) in state.cells.flatten_enumerate() {
             // append to lookup

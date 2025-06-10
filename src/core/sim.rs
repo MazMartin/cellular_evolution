@@ -4,14 +4,14 @@ pub struct SimContext {
     pub viscosity: f64,
 }
 
-pub struct AppContext {
+pub struct SimulationState {
     pub context: SimContext,
     pub cells: Heap<Cell>,
     pub connections: Vec<CellConnection>,
 }
 
-impl AppContext {
-    pub fn new(context: SimContext) -> AppContext {
+impl SimulationState {
+    pub fn new(context: SimContext) -> SimulationState {
         Self {
             context,
             cells: Heap::with_capacity(100),

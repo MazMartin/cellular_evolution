@@ -7,7 +7,7 @@ use super::renderer::TileRenderer;
 
 use glam::Vec2;
 use wgpu::{BindGroup, ShaderStages};
-use crate::core::sim::AppContext;
+use crate::core::sim::SimulationState;
 
 pub struct BorderTile {
     pipeline: wgpu::RenderPipeline,
@@ -122,7 +122,7 @@ impl TileRenderer for BorderTile {
         self.info_buff.write(queue, &BorderInfoUniform::new(size, 20.0));
     }
 
-    fn update_render_data(&mut self, _: Arc<Mutex<AppContext>>, _: &wgpu::Queue) {
+    fn update_render_data(&mut self, _: Arc<Mutex<SimulationState>>, _: &wgpu::Queue) {
         // Border doesn't need state updates
     }
 

@@ -1,8 +1,16 @@
 use super::tile::TileViewManager;
 use crate::gpu;
-
+use hecs::World;
 
 struct App {
-    gpu_context: Option<gpu::context::GpuContext>,
-    tiles: TileViewManager,
+    ecs: World,
+
+}
+
+impl App {
+    fn new() -> Self {
+        Self {
+            ecs: World::new(),
+        }
+    }
 }
