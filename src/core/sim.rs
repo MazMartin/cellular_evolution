@@ -30,4 +30,9 @@ impl SimulationState {
             }
         }
     }
+    
+    pub fn tick(&mut self, dt: f64) {
+        self.physics_pass(dt);
+        
+    }
 }

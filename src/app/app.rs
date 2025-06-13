@@ -1,8 +1,9 @@
 use crate::core::sim::{SimContext};
 use crate::graphics::border::BorderTile;
 use crate::graphics::layers::SimulationTile;
-use crate::app::tile::TileViewManager;
+use super::tile::TileViewManager;
 use crate::testing::benches;
+use super::components;
 
 use glam::{vec2, Vec2};
 use std::sync::{Arc, Mutex};
@@ -17,24 +18,6 @@ use winit::{
 use hecs::World;
 use crate::gpu;
 
-mod components {
-    use crate::core::sim::{SimulationState};
-    use std::sync::{Arc, Mutex};
-    use wgpu;
-
-    pub struct Simulation {
-        pub state: Arc<Mutex<SimulationState>>,
-    }
-
-    pub struct RenderSystem {
-        pub queue: Arc<wgpu::Queue>,
-    }
-
-    pub struct PhysicsSystem {
-        pub dt: f64,
-    }
-}
-
 pub struct App {
     gpu_context: Option<gpu::context::GpuContext>,
     world: World,
@@ -47,38 +30,26 @@ impl App {
     pub fn new() -> Self {
         let mut world = World::new();
         let mut tiles = TileViewManager::new();
+
+        let sim_context = SimContext { viscosity: 25.0 };
+
+        let simulation_state = Arc::new(Mutex::new(benches::organism_lookn_cells(sim_context)));
+
+        world.spawn((
+            components::Simulation {
+                state: simulation_state,
+            },
+            components::PhysicsSystem {
+                dt: 1.0 / Self::FPS as f64,
+            },
+        ));
         
-        let sim_context1 = SimContext { viscosity: 25.0 };
-        let sim_context2 = SimContext { viscosity: 1.0 };
-
-        let simulation_state1 = Arc::new(Mutex::new(benches::organism_lookn_cells(sim_context1)));
-        let simulation_state2 = Arc::new(Mutex::new(benches::organism_lookn_cells(sim_context2)));
-
-        world.spawn((
-            components::Simulation {
-                state: simulation_state1,
-            },
-            components::PhysicsSystem {
-                dt: 1.0 / Self::FPS as f64,
-            },
-        ));
-
-        world.spawn((
-            components::Simulation {
-                state: simulation_state2,
-            },
-            components::PhysicsSystem {
-                dt: 1.0 / Self::FPS as f64,
-            },
-        ));
-
-
         let mut env_nodes = Vec::new();
 
-        for _ in 0..2 {
+        for _ in 0..1 {
             let style = Style {
                 size: Size {
-                    width: Dimension::percent(0.5),
+                    width: Dimension::percent(0.8),
                     height: Dimension::auto(),
                 },
                 aspect_ratio: Some(16.0 / 9.0),
@@ -112,7 +83,7 @@ impl App {
             gpu_context.size.width as f32,
             gpu_context.size.height as f32,
         ));
-        
+
         for node in &self.env_nodes {
             let env = SimulationTile::new(Vec2::new(15.0, 10.0), &gpu_context);
             env.init_buffers(&gpu_context.queue);

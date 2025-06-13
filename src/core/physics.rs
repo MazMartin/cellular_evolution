@@ -1,4 +1,4 @@
-use crate::core::elements::Cell;
+use crate::core::elements::{Cell, CellConnection};
 use crate::core::sim::SimulationState;
 use crate::physics::forces::{ForceApplier, ForceAppl, Lever, LinearSpring};
 use crate::utils::vector::Vec2d;
@@ -25,17 +25,18 @@ impl SimulationState {
         }
 
         for cell in self.cells.flatten_iter_mut() {
-            let force = -cell.velocity * cell.size * self.context.viscosity;
-            let torque = -cell.angular_velocity * cell.size * self.context.viscosity;
-
-            cell.apply_force(force);
-            cell.apply_torque(torque);
-        }
-
-        for cell in self.cells.flatten_iter_mut() {
-            cell.integrate(dt)
+            apply_viscous_force(cell, self.context.viscosity);
+            cell.apply_force_integrate(dt)
         }
     }
+}
+
+fn apply_viscous_force(cell: &mut Cell, viscosity: f64) {
+    let force = -cell.velocity * cell.size * viscosity;
+    let torque = -cell.angular_velocity * cell.size * viscosity;
+
+    cell.apply_force(force);
+    cell.apply_torque(torque);
 }
 
 impl Cell {
@@ -47,7 +48,7 @@ impl Cell {
         }
     }
 
-    fn integrate(&mut self, dt: f64) {
+    fn apply_force_integrate(&mut self, dt: f64) {
         self.velocity += self.force * dt / self.mass;
         self.angular_velocity += self.torque * dt / self.angular_inertia;
 
