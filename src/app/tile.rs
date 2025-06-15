@@ -92,7 +92,8 @@ impl TileViewManager {
     }
 
     // Layer Methods
-    pub fn add_renderer<R: TileRenderer + 'static>(&mut self, node: NodeId, layer: R) {
+    pub fn add_renderer<R: TileRenderer + 'static>(&mut self, node: NodeId, layer: R, queue: &wgpu::Queue) {
+        layer.init(queue);
         if let Some(tile) = self.tiles.get_mut(&node) {
             tile.render_layers.push(Box::new(layer));
         }

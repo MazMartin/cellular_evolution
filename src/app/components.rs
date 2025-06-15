@@ -1,15 +1,8 @@
 use crate::core::sim::{SimulationState};
 use std::sync::{Arc, Mutex};
-use wgpu;
+use taffy::NodeId;
 
 pub struct Simulation {
     pub state: Arc<Mutex<SimulationState>>,
-}
-
-pub struct RenderSystem {
-    pub queue: Arc<wgpu::Queue>,
-}
-
-pub struct PhysicsSystem {
-    pub dt: f64,
+    pub tile: Option<NodeId>,
 }

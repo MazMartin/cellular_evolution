@@ -172,16 +172,15 @@ impl SimulationTile {
             projection_bind,
         }
     }
+}
 
-    pub fn init_buffers(&self, queue: &wgpu::Queue) {
+impl TileRenderer for SimulationTile {
+    fn init(&self, queue: &wgpu::Queue) {
         self.vert_buff
             .write_array(&queue, &AABB::UNIT.corners().ccw_mesh());
         self.projection_buff
             .write(&queue, &mat4_to_gpu_mat(self.camera.to_mat4().inverse()))
     }
-}
-
-impl TileRenderer for SimulationTile {
     fn resize(&mut self, size: Vec2, queue: &wgpu::Queue) {
         let aspect = size.x / size.y;
         let zoom = 10.0;

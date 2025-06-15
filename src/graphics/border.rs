@@ -6,7 +6,7 @@ use super::models::{gpu::*, space::*};
 use super::renderer::TileRenderer;
 
 use glam::Vec2;
-use wgpu::{BindGroup, ShaderStages};
+use wgpu::{BindGroup, Queue, ShaderStages};
 use crate::core::sim::SimulationState;
 
 pub struct BorderTile {
@@ -115,6 +115,9 @@ impl BorderTile {
 }
 
 impl TileRenderer for BorderTile {
+    fn init(&self, queue: &Queue) {
+        
+    }
     fn resize(&mut self, size: Vec2, queue: &wgpu::Queue) {
         let aabb = AABB::new(Vec2::ZERO, size * 0.5);
         let vertices = Self::generate_border_mesh(aabb, 20.0);

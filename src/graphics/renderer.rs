@@ -61,6 +61,7 @@ impl GpuContext {
 }
 
 pub trait TileRenderer {
+    fn init(&self, queue: &wgpu::Queue);
     fn resize(&mut self, size: Vec2, queue: &wgpu::Queue);
     fn update_render_data(&mut self, state: Arc<Mutex<SimulationState>>, queue: &wgpu::Queue);
     fn render_pipeline<'a>(&'a self, render_pass: &mut RenderPass<'a>);
