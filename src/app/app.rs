@@ -4,6 +4,7 @@ use crate::graphics::layers::SimulationTile;
 use crate::testing::benches;
 use crate::app::components::Simulation;
 use crate::gpu;
+use super::utils;
 
 use super::tile::TileViewManager;
 
@@ -60,9 +61,15 @@ impl App {
 
     /// Initializes the GPU context and attaches renderers for the simulation.
     fn init_gpu(&mut self, event_loop: &ActiveEventLoop) {
+        let icon = utils::load_icon("assets/icon1.png");
+
+        let window_attrs = Window::default_attributes()
+            .with_title("Cellular Evolution")
+            .with_window_icon(Some(icon));
+
         let window = Arc::new(
             event_loop
-                .create_window(Window::default_attributes())
+                .create_window(window_attrs)
                 .expect("Failed to create window"),
         );
 

@@ -96,11 +96,11 @@ impl EnvironmentRenderLoader {
                 panic!("Primitive slice is empty");
             };
 
-            let mut aabb_union = AABB::UNIT.transformed(self.primitives[first_index].transform);
+            let mut aabb_union = AABB::UNIT.transformed(self.primitives[first_index].transform) * 1.2;
 
             for &index in rest_indices {
                 let sub_transform = self.primitives[index].transform;
-                let sub_aabb = AABB::UNIT.transformed(sub_transform);
+                let sub_aabb = AABB::UNIT.transformed(sub_transform) * 1.2;
                 aabb_union = aabb_union.union(&sub_aabb);
             }
 

@@ -52,3 +52,19 @@ pub fn random_pos_in_bounds(rng: &mut impl Rng, bound: AABB) -> Vec2 {
     let y = rng.gen_range(min.y..=max.y);
     Vec2::new(x, y)
 }
+
+
+/// Creates a sample organism consisting of a single neural cell centered in the bounds.
+pub fn organism_single_cell(context: SimContext) -> SimulationState {
+    let bound = AABB::UNIT * 4.0;
+    let center = bound.center;
+
+    let mut state = SimulationState::new(context);
+
+    // Insert one cell in the center
+    state.cells.insert_alloc_vec(vec![
+        Cell::new(center.into(), CellType::Fat)
+    ]);
+
+    state
+}

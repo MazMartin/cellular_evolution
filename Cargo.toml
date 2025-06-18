@@ -14,6 +14,7 @@ glam = "0.30.1"
 rand = "0.9.0"
 taffy = "0.8.2"
 hecs = "0.10"
+image = "0.25.6"
 
 [features]
 test = []
