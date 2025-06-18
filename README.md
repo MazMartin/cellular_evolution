@@ -10,7 +10,7 @@ It’s a work in progress intended for learning and experimentation rather than 
 Whether you’re curious about evolution, simulation, or just enjoy tinkering with Rust and graphics programming,
 this project offers a starting point to explore those ideas.
 
-
+![screenshot](assets/screenshot.png)
 
 ## Features
 
