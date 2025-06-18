@@ -12,6 +12,18 @@ this project offers a starting point to explore those ideas.
 
 ![screenshot](assets/screenshot.png)
 
+
+## Project Status
+### Note: This project is not yet complete, but it is currently in a stable and usable state.
+
+The core systems — including GPU-accelerated rendering and physics simulation with cell interactions — have been fully implemented.
+The application runs reliably and renders cell-based organisms with proper spatial layout and physical behavior.
+
+However, the evolutionary logic — the part of the system responsible for allowing organisms to evolve autonomously over time — is still under development.
+Cells can be initialized and simulated, but they do not yet exhibit adaptive or evolutionary behavior.
+
+This makes the project suitable for exploration, experimentation, and development, but not yet for studying self-directed evolution.
+
 ## Features
 
 - GPU-accelerated rendering
