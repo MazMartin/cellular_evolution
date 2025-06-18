@@ -44,6 +44,8 @@ impl Vec2d {
     }
 }
 
+// Operators for Vec2d: add, sub, mul (scalar), div (scalar), neg, add_assign
+
 impl Add for Vec2d {
     type Output = Self;
     fn add(self, rhs: Self) -> Self::Output {
@@ -92,6 +94,8 @@ impl AddAssign for Vec2d {
         self.y += rhs.y;
     }
 }
+
+// Conversion from glam's Vec2 to your Vec2d
 
 use glam::Vec2;
 

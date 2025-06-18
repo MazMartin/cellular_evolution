@@ -2,7 +2,8 @@ use crate::graphics::models::space::SrtTransform;
 use glam::{Vec2, Vec4};
 use crate::utils::{algorithms::CSR, data::IdxPair};
 
-
+/// Tests that transforming a point by an SrtTransform and then applying the inverse
+/// returns the original point (within floating point precision).
 #[test]
 pub fn test_transforms() {
     let forward = SrtTransform {
@@ -22,23 +23,28 @@ pub fn test_transforms() {
     println!("should be same point: {:?}", un_transformed);
 }
 
+/// Tests that CSR grouping works correctly on a set of connections.
+/// The groups are checked against expected cluster groupings.
 #[test]
 fn test_csr() {
     let connections = vec![IdxPair::new(0, 1), IdxPair::new(1, 2), IdxPair::new(3, 4)];
 
     let csr = CSR::groups_from_connections(&connections, 5);
 
+    // Collect groups of indices from CSR ranges
     let mut groups: Vec<Vec<usize>> = csr
         .indptr
         .iter()
         .map(|range| csr.indices[range.a..range.b].to_vec())
         .collect();
 
+    // Sort each group for stable comparison
     for group in &mut groups {
         group.sort();
     }
     groups.sort();
 
+    // Expected groups: connected components plus isolated node '5'
     let expected_groups = vec![vec![0, 1, 2], vec![3, 4], vec![5]];
 
     assert_eq!(groups, expected_groups);

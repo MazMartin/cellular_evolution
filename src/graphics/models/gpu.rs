@@ -1,6 +1,8 @@
 use super::cpu::Primitive;
 use glam::{Mat4, Vec2};
+use std::mem::size_of;
 
+/// GPU vertex format for 2D positions.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct GpuVertex([f32; 2]);
@@ -9,10 +11,12 @@ unsafe impl bytemuck::Pod for GpuVertex {}
 unsafe impl bytemuck::Zeroable for GpuVertex {}
 
 impl GpuVertex {
+    /// Create a new GPU vertex from a 2D vector.
     pub fn new(Vec2 { x, y }: Vec2) -> Self {
         Self([x, y])
     }
 
+    /// Returns the vertex buffer layout descriptor for `GpuVertex`.
     pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: size_of::<GpuVertex>() as wgpu::BufferAddress,
@@ -28,10 +32,12 @@ impl From<Vec2> for GpuVertex {
     }
 }
 
+/// Converts a `Mat4` matrix into a 4x4 array suitable for GPU uniform upload.
 pub fn mat4_to_gpu_mat(mat: Mat4) -> [[f32; 4]; 4] {
     mat.to_cols_array_2d()
 }
 
+/// Instance data for rendering a quad in a GPU draw call.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct GpuQuadRenderInstance {
@@ -45,26 +51,32 @@ unsafe impl bytemuck::Pod for GpuQuadRenderInstance {}
 unsafe impl bytemuck::Zeroable for GpuQuadRenderInstance {}
 
 impl GpuQuadRenderInstance {
-    const ATTRIBS: [wgpu::VertexAttribute; 4] = wgpu::vertex_attr_array![
-            5 => Float32x2, 6 => Float32x2,
-            7 => Uint32, 8 => Uint32];
+    /// Vertex attributes for the instance buffer starting at location 5.
+    const ATTRIBUTES: [wgpu::VertexAttribute; 4] = wgpu::vertex_attr_array![
+        5 => Float32x2,
+        6 => Float32x2,
+        7 => Uint32,
+        8 => Uint32
+    ];
 
+    /// Returns the vertex buffer layout descriptor for instances.
     pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: size_of::<GpuQuadRenderInstance>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Instance,
-            attributes: &Self::ATTRIBS,
+            attributes: &Self::ATTRIBUTES,
         }
     }
 }
 
+/// GPU representation of a primitive shape with transform and color.
 #[repr(C, align(16))]
 #[derive(Copy, Clone, Debug)]
 pub struct GpuPrimitive {
     unit_projection: [[f32; 4]; 4],
     color: [f32; 4],
     shape: u32,
-    _padding: [u32; 3],
+    _padding: [u32; 3], // Padding for 16-byte alignment
 }
 
 unsafe impl bytemuck::Pod for GpuPrimitive {}
@@ -90,6 +102,7 @@ impl From<Primitive> for GpuPrimitive {
     }
 }
 
+/// GPU index for primitive referencing in shaders.
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct GpuPrimitiveIndex {
@@ -113,15 +126,17 @@ impl From<usize> for GpuPrimitiveIndex {
     }
 }
 
+/// Uniform buffer for border rendering information.
 #[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
 pub struct BorderInfoUniform {
     pub size: [f32; 2],
     pub width: f32,
-    _pad: [f32; 1],
+    _pad: [f32; 1], // Padding for alignment
 }
 
 impl BorderInfoUniform {
+    /// Creates a new `BorderInfoUniform`.
     pub fn new(size: Vec2, width: f32) -> Self {
         Self {
             size: [size.x, size.y],

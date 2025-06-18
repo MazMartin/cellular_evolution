@@ -1,4 +1,3 @@
-mod compute;
 mod core;
 mod gpu;
 mod graphics;
@@ -10,6 +9,8 @@ mod app;
 use winit::event_loop::{ControlFlow, EventLoop};
 use crate::app::app::App;
 
+
+// entry code for application.
 fn main() {
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();

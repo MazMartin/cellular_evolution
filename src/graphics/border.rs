@@ -9,6 +9,14 @@ use glam::Vec2;
 use wgpu::{BindGroup, Queue, ShaderStages};
 use crate::core::sim::SimulationState;
 
+/// A GPU-backed renderer for drawing rectangular borders as tiles.
+///
+/// The `BorderTile` manages a vertex buffer for border geometry,
+/// a uniform buffer with border size and width info, and a pipeline
+/// to render the border using a WGSL shader.
+///
+/// The border is rendered as four quads around the edges of an AABB,
+/// with adjustable width.
 pub struct BorderTile {
     pipeline: wgpu::RenderPipeline,
     vert_buff: GpuBuffer<GpuVertex>,
@@ -17,7 +25,9 @@ pub struct BorderTile {
 }
 
 impl BorderTile {
+    /// Creates a new `BorderTile` rendering pipeline and associated GPU buffers.
     pub fn new(context: &GpuContext) -> Self {
+        // Compile the WGSL shader module for border rendering
         let shader = context.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Border Shader"),
             source: wgpu::ShaderSource::Wgsl(combine_code!(
@@ -25,18 +35,21 @@ impl BorderTile {
             ).into()),
         });
 
+        // Create the vertex buffer for border geometry (24 vertices for 4 quads)
         let vert_buff = context.create_buffer(
             wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             "Border Vertices",
             24,
         );
 
+        // Create a uniform buffer holding border size and width data
         let info_buff = context.create_buffer::<BorderInfoUniform>(
             wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             "Border Info",
             1,
         );
 
+        // Create a bind group for the uniform buffer with vertex and fragment shader visibility
         let (info_layout, info_bind) = context.create_bind_data(&[(
             &info_buff.buffer,
             BindInfo {
@@ -45,12 +58,14 @@ impl BorderTile {
             },
         )]);
 
+        // Create pipeline layout using the uniform bind group layout
         let pipeline_layout = context.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Border Pipeline Layout"),
             bind_group_layouts: &[&info_layout],
             push_constant_ranges: &[],
         });
 
+        // Create the render pipeline for drawing the border
         let pipeline = context.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Border Pipeline"),
             layout: Some(&pipeline_layout),
@@ -87,27 +102,30 @@ impl BorderTile {
 
         Self { pipeline, vert_buff, info_buff, info_bind }
     }
-    
+
+    /// Generates the mesh vertices for a border around the given AABB.
     fn generate_border_mesh(aabb: AABB, width: f32) -> [GpuVertex; 24] {
+        // Inner rectangle shrunk by border width
         let inner = aabb.add_padding(-width).corners();
+        // Outer rectangle is the original aabb corners
         let outer = aabb.add_padding(0.0).corners();
 
         let v = |pos: Vec2| GpuVertex::new(pos);
 
         [
-            // Top
+            // Top quad (2 triangles)
             v(outer.tl), v(outer.tr), v(inner.tr),
             v(inner.tr), v(inner.tl), v(outer.tl),
 
-            // Right
+            // Right quad
             v(outer.tr), v(outer.br), v(inner.br),
             v(inner.br), v(inner.tr), v(outer.tr),
 
-            // Bottom
+            // Bottom quad
             v(outer.br), v(outer.bl), v(inner.bl),
             v(inner.bl), v(inner.br), v(outer.br),
 
-            // Left
+            // Left quad
             v(outer.bl), v(outer.tl), v(inner.tl),
             v(inner.tl), v(inner.bl), v(outer.bl),
         ]
@@ -115,9 +133,10 @@ impl BorderTile {
 }
 
 impl TileRenderer for BorderTile {
-    fn init(&self, queue: &Queue) {
-        
-    }
+    /// Called once to initialize the renderer.
+    fn init(&self, _queue: &Queue) {}
+
+    /// Called when the viewport or target size changes.
     fn resize(&mut self, size: Vec2, queue: &wgpu::Queue) {
         let aabb = AABB::new(Vec2::ZERO, size * 0.5);
         let vertices = Self::generate_border_mesh(aabb, 20.0);
@@ -125,10 +144,12 @@ impl TileRenderer for BorderTile {
         self.info_buff.write(queue, &BorderInfoUniform::new(size, 20.0));
     }
 
-    fn update_render_data(&mut self, _: Arc<Mutex<SimulationState>>, _: &wgpu::Queue) {
+    /// Updates render data based on simulation state.
+    fn update_render_data(&mut self, _state: Arc<Mutex<SimulationState>>, _queue: &wgpu::Queue) {
         // Border doesn't need state updates
     }
 
+    /// Encodes commands to render on the render pass.
     fn render_pipeline(&self, render_pass: &mut wgpu::RenderPass) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.info_bind, &[]);

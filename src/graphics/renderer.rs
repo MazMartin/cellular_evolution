@@ -4,6 +4,8 @@ use std::sync::{Arc, Mutex};
 use wgpu::RenderPass;
 use crate::core::sim::SimulationState;
 
+/// Holds the data needed to render a single frame,
+/// including the texture to draw to, command encoder, and view.
 pub struct FrameContext {
     pub surface_texture: wgpu::SurfaceTexture,
     pub encoder: wgpu::CommandEncoder,
@@ -11,6 +13,7 @@ pub struct FrameContext {
 }
 
 impl FrameContext {
+    /// Starts a render pass that clears the frame to black.
     pub fn begin_render_pass(&mut self) -> RenderPass {
         self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
@@ -30,6 +33,7 @@ impl FrameContext {
 }
 
 impl GpuContext {
+    /// Prepares GPU for a new frame by acquiring the next texture and creating a command encoder.
     pub fn start_frame(&mut self) -> FrameContext {
         let surface_texture = self
             .surface
@@ -38,8 +42,7 @@ impl GpuContext {
         let texture_view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor {
-                // Without add_srgb_suffix() the image we will be working with
-                // might not be "gamma correct".
+                // Use sRGB format to ensure correct gamma.
                 format: Some(self.surface_format.add_srgb_suffix()),
                 ..Default::default()
             });
@@ -53,6 +56,7 @@ impl GpuContext {
         }
     }
 
+    /// Submits the recorded commands and presents the frame.
     pub fn end_frame(&mut self, frame: FrameContext) {
         self.queue.submit(std::iter::once(frame.encoder.finish()));
         self.window.pre_present_notify();
@@ -60,10 +64,20 @@ impl GpuContext {
     }
 }
 
+/// Interface for rendering tiles.
+///
+/// Responsible for initialization, resizing, updating GPU data,
+/// and issuing draw calls during render passes.
 pub trait TileRenderer {
+    /// Called once to initialize the renderer.
     fn init(&self, queue: &wgpu::Queue);
+    
+    /// Called when the viewport or target size changes
     fn resize(&mut self, size: Vec2, queue: &wgpu::Queue);
+    
+    /// Updates render data based on simulation state.
     fn update_render_data(&mut self, state: Arc<Mutex<SimulationState>>, queue: &wgpu::Queue);
+
+    /// Encodes commands to render on the render pass.
     fn render_pipeline<'a>(&'a self, render_pass: &mut RenderPass<'a>);
 }
-

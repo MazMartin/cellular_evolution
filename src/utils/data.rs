@@ -9,6 +9,7 @@ impl IdxPair {
         Self { a, b }
     }
 
+    // Distance between a and b
     pub fn span(&self) -> usize {
         self.b - self.a
     }
@@ -16,9 +17,9 @@ impl IdxPair {
 
 #[derive(Copy, Clone, Debug)]
 enum HeapSlot<T> {
-    None,
-    Allocated,
-    Some(T),
+    None,        // free slot
+    Allocated,   // reserved but uninitialized
+    Some(T),     // initialized with value
 }
 
 pub struct Heap<T> {
@@ -26,6 +27,7 @@ pub struct Heap<T> {
 }
 
 impl<T: Clone> Heap<T> {
+    // Create heap with given capacity, all slots free
     pub fn with_capacity(capacity: usize) -> Self {
         Heap {
             slots: vec![HeapSlot::None; capacity],
@@ -34,13 +36,16 @@ impl<T: Clone> Heap<T> {
 }
 
 impl<T> Heap<T> {
+    // Allocate contiguous free slots; return start index
     pub fn allocate_slots(&mut self, count: usize) -> usize {
         let mut i = 0;
         while i + count <= self.slots.len() {
+            // Check if all slots in range are free
             if self.slots[i..i + count]
                 .iter()
                 .all(|slot| matches!(slot, HeapSlot::None))
             {
+                // Mark slots as allocated
                 for slot in &mut self.slots[i..i + count] {
                     *slot = HeapSlot::Allocated;
                 }
@@ -49,16 +54,18 @@ impl<T> Heap<T> {
             i += 1;
         }
 
-        // expand if needed
+        // No free block found, extend slots and allocate at end
         let start = self.slots.len();
         self.slots.extend((0..count).map(|_| HeapSlot::Allocated));
         start
     }
 
+    // Free one slot at index
     pub fn free(&mut self, slot: usize) {
         self.slots[slot] = HeapSlot::None;
     }
 
+    // Insert values into already allocated slots at start
     pub fn insert_vec(&mut self, start: usize, values: Vec<T>) {
         let end = start + values.len();
         assert!(end <= self.slots.len(), "Range out of bounds");
@@ -74,33 +81,37 @@ impl<T> Heap<T> {
         }
     }
 
+    // Allocate slots and insert values immediately
     pub fn insert_alloc_vec(&mut self, values: Vec<T>) {
         let start = self.allocate_slots(values.len());
         self.insert_vec(start, values);
     }
 
+    // Get immutable reference to value at index
     pub fn get(&self, index: usize) -> &T {
         match self.slots.get(index) {
             Some(HeapSlot::Some(value)) => value,
             Some(HeapSlot::Allocated) => {
-                panic!("Slot at index {index} is only allocated, but not initialized")
+                panic!("Slot at index {index} is allocated but uninitialized")
             }
             Some(HeapSlot::None) => panic!("Slot at index {index} is free (None)"),
-            None => panic!("Index {index} is out of bounds"),
+            None => panic!("Index {index} out of bounds"),
         }
     }
 
+    // Get mutable reference to value at index
     pub fn get_mut(&mut self, index: usize) -> &mut T {
         match self.slots.get_mut(index) {
             Some(HeapSlot::Some(value)) => value,
             Some(HeapSlot::Allocated) => {
-                panic!("Slot at index {index} is only allocated, but not initialized")
+                panic!("Slot at index {index} is allocated but uninitialized")
             }
             Some(HeapSlot::None) => panic!("Slot at index {index} is free (None)"),
-            None => panic!("Index {index} is out of bounds"),
+            None => panic!("Index {index} out of bounds"),
         }
     }
 
+    // Get mutable references to two distinct values safely
     pub fn get_mut_pair(&mut self, a: usize, b: usize) -> (&mut T, &mut T) {
         assert_ne!(a, b, "Indices must be different");
 
@@ -129,6 +140,7 @@ impl<T> Heap<T> {
         }
     }
 
+    // Iterator over all initialized values
     pub fn flatten_iter(&self) -> impl Iterator<Item = &T> + '_ {
         self.slots.iter().filter_map(|slot| {
             if let HeapSlot::Some(value) = slot {
@@ -139,6 +151,7 @@ impl<T> Heap<T> {
         })
     }
 
+    // Mutable iterator over all initialized values
     pub fn flatten_iter_mut(&mut self) -> impl Iterator<Item = &mut T> + '_ {
         self.slots.iter_mut().filter_map(|slot| {
             if let HeapSlot::Some(value) = slot {
@@ -149,6 +162,7 @@ impl<T> Heap<T> {
         })
     }
 
+    // Iterator over (original_index, flattened_index, &value)
     pub fn flatten_enumerate(&self) -> impl Iterator<Item = (usize, usize, &T)> + '_ {
         self.slots
             .iter()
